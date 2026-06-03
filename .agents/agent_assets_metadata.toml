@@ -1,8 +1,13 @@
 uploads = []
-outputs = []
 
 [[generated]]
 id = "alsIR45uv00x0wp2npKj6"
 uri = "file://artifacts/mobile/assets/images/icon.png"
 type = "image"
 title = "joycon bridge app icon"
+
+[[outputs]]
+id = "7z13TIkuffgn320Uyk7pY"
+uri = "file://WINDOWS_CLIENT_SPEC.md"
+type = "text"
+title = "Windows Client Specification"

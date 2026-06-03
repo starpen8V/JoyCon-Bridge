@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BridgePanel } from "@/components/BridgePanel";
 import { JoyConCard } from "@/components/JoyConCard";
 import { RumbleLog } from "@/components/RumbleLog";
+import { RumbleTestPanel } from "@/components/RumbleTestPanel";
 import { useBridge } from "@/context/BridgeContext";
 import { useJoyCon } from "@/context/JoyConContext";
 import { useColors } from "@/hooks/useColors";
@@ -154,6 +155,13 @@ export default function HomeScreen() {
         </View>
 
         <RumbleLog />
+
+        <View style={[styles.sectionLabel, { marginTop: 16 }]}>
+          <Text style={[styles.label, { color: colors.mutedForeground }]}>
+            RUMBLE TEST
+          </Text>
+        </View>
+        <RumbleTestPanel />
 
         {simulationMode && (
           <View style={[styles.simNotice, { borderColor: "#f5a62333" }]}>
