@@ -29,7 +29,12 @@ function RootLayoutNav() {
         name="scan"
         options={{ presentation: "modal", animation: "slide_from_bottom" }}
       />
+      <Stack.Screen
+        name="qr-scan"
+        options={{ presentation: "modal", animation: "slide_from_bottom" }}
+      />
       <Stack.Screen name="settings" />
+      <Stack.Screen name="build-instructions" />
     </Stack>
   );
 }

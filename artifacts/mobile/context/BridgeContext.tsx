@@ -39,6 +39,8 @@ export function BridgeProvider({ children }: { children: React.ReactNode }) {
     packetsDropped: 0,
   });
   const [config, setConfig] = useState<BridgeConfig>(DEFAULT_BRIDGE_CONFIG);
+  const configRef = useRef(config);
+  configRef.current = config;
 
   const serviceRef = useRef<BridgeService | null>(null);
   const statsIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -57,13 +59,8 @@ export function BridgeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const svc = new BridgeService(config);
     serviceRef.current = svc;
-
     const unsubStatus = svc.onStatus(setStatus);
-
-    statsIntervalRef.current = setInterval(() => {
-      setStats(svc.getStats());
-    }, 500);
-
+    statsIntervalRef.current = setInterval(() => setStats(svc.getStats()), 500);
     return () => {
       unsubStatus();
       if (statsIntervalRef.current) clearInterval(statsIntervalRef.current);

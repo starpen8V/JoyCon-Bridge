@@ -19,6 +19,7 @@ export interface BridgeConfig {
   autoReconnect: boolean;
   inputRateHz: number;
   enableRumble: boolean;
+  adbMode: boolean;
 }
 
 export const DEFAULT_BRIDGE_CONFIG: BridgeConfig = {
@@ -27,6 +28,7 @@ export const DEFAULT_BRIDGE_CONFIG: BridgeConfig = {
   autoReconnect: true,
   inputRateHz: 60,
   enableRumble: true,
+  adbMode: false,
 };
 
 type RumbleListener = (cmd: RumbleCommand) => void;
@@ -47,7 +49,6 @@ export class BridgeService {
     bytesSent: 0,
     packetsDropped: 0,
   };
-  private sentCount = 0;
   private rateWindow: number[] = [];
 
   constructor(config: BridgeConfig) {
@@ -76,10 +77,15 @@ export class BridgeService {
     return () => this.statusListeners.delete(listener);
   }
 
+  getEffectiveHost(): string {
+    return this.config.adbMode ? "localhost" : this.config.host;
+  }
+
   connect() {
     if (this.status === "connecting" || this.status === "connected") return;
     this.setStatus("connecting");
-    const url = `ws://${this.config.host}:${this.config.port}`;
+    const host = this.getEffectiveHost();
+    const url = `ws://${host}:${this.config.port}`;
     try {
       this.ws = new WebSocket(url);
 
@@ -112,8 +118,7 @@ export class BridgeService {
           } else if (msg.type === "pong") {
             this.stats.latencyMs = Date.now() - this.lastPingTs;
           }
-        } catch {
-        }
+        } catch {}
       };
     } catch {
       this.setStatus("error");
@@ -152,8 +157,7 @@ export class BridgeService {
         this.lastPingTs = Date.now();
         try {
           this.ws.send(JSON.stringify({ type: "ping", ts: this.lastPingTs }));
-        } catch {
-        }
+        } catch {}
       }
     }, 2000);
   }

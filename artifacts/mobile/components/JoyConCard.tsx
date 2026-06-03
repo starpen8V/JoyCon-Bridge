@@ -1,8 +1,7 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { useRouter } from "expo-router";
 import React, { useEffect } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -12,6 +11,7 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { ButtonDot } from "@/components/ButtonDot";
+import { DeviceDropdown } from "@/components/DeviceDropdown";
 import { StickVisualizer } from "@/components/StickVisualizer";
 import { useJoyCon } from "@/context/JoyConContext";
 import { useColors } from "@/hooks/useColors";
@@ -23,12 +23,9 @@ interface Props {
 
 export function JoyConCard({ side }: Props) {
   const colors = useColors();
-  const router = useRouter();
-  const { leftJoyCon, rightJoyCon, disconnectSide } = useJoyCon();
+  const { leftJoyCon, rightJoyCon } = useJoyCon();
   const joycon = side === "left" ? leftJoyCon : rightJoyCon;
-
-  const accentColor =
-    side === "left" ? colors.leftJoyCon : colors.rightJoyCon;
+  const accentColor = side === "left" ? colors.leftJoyCon : colors.rightJoyCon;
   const pulseAnim = useSharedValue(0);
 
   useEffect(() => {
@@ -53,18 +50,6 @@ export function JoyConCard({ side }: Props) {
     })`,
   }));
 
-  const statusColor = joycon.connected ? colors.success : colors.mutedForeground;
-
-  const handleConnect = () => {
-    router.push({ pathname: "/scan", params: { side } });
-    Haptics.selectionAsync().catch(() => {});
-  };
-
-  const handleDisconnect = () => {
-    disconnectSide(side);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
-  };
-
   const batteryIcon =
     joycon.batteryLevel > 70
       ? "battery-high"
@@ -75,62 +60,26 @@ export function JoyConCard({ side }: Props) {
   return (
     <Animated.View style={[styles.card, { backgroundColor: colors.card }, cardAnimStyle]}>
       <View style={styles.header}>
-        <View style={styles.titleRow}>
-          <View
-            style={[styles.sideTag, { backgroundColor: accentColor + "22" }]}
-          >
-            <Text style={[styles.sideTagText, { color: accentColor }]}>
-              {side === "left" ? "L" : "R"}
+        <View style={[styles.sideTag, { backgroundColor: accentColor + "22" }]}>
+          <Text style={[styles.sideTagText, { color: accentColor }]}>
+            {side === "left" ? "L" : "R"}
+          </Text>
+        </View>
+
+        <DeviceDropdown side={side} joycon={joycon} accentColor={accentColor} />
+
+        {joycon.connected && (
+          <View style={styles.battery}>
+            <MaterialCommunityIcons
+              name={batteryIcon}
+              size={15}
+              color={joycon.batteryLevel > 35 ? colors.success : colors.destructive}
+            />
+            <Text style={[styles.batteryText, { color: colors.mutedForeground }]}>
+              {joycon.batteryLevel}%
             </Text>
           </View>
-          <View style={styles.statusDot}>
-            <View style={[styles.dot, { backgroundColor: statusColor }]} />
-            <Text style={[styles.deviceName, { color: colors.foreground }]}>
-              {joycon.connected ? joycon.deviceName : "Not connected"}
-            </Text>
-          </View>
-        </View>
-        <View style={styles.headerRight}>
-          {joycon.connected && (
-            <View style={styles.battery}>
-              <MaterialCommunityIcons
-                name={batteryIcon}
-                size={16}
-                color={
-                  joycon.batteryLevel > 35 ? colors.success : colors.destructive
-                }
-              />
-              <Text style={[styles.batteryText, { color: colors.mutedForeground }]}>
-                {joycon.batteryLevel}%
-              </Text>
-            </View>
-          )}
-          {joycon.connected ? (
-            <Pressable
-              onPress={handleDisconnect}
-              hitSlop={12}
-              style={({ pressed }) => [styles.iconBtn, { opacity: pressed ? 0.5 : 1 }]}
-            >
-              <MaterialCommunityIcons
-                name="bluetooth-off"
-                size={18}
-                color={colors.mutedForeground}
-              />
-            </Pressable>
-          ) : (
-            <Pressable
-              onPress={handleConnect}
-              hitSlop={12}
-              style={({ pressed }) => [styles.iconBtn, { opacity: pressed ? 0.5 : 1 }]}
-            >
-              <MaterialCommunityIcons
-                name="bluetooth-connect"
-                size={18}
-                color={accentColor}
-              />
-            </Pressable>
-          )}
-        </View>
+        )}
       </View>
 
       {joycon.connected ? (
@@ -192,22 +141,12 @@ export function JoyConCard({ side }: Props) {
           )}
         </View>
       ) : (
-        <Pressable
-          onPress={handleConnect}
-          style={({ pressed }) => [
-            styles.connectPrompt,
-            { borderColor: accentColor + "44", opacity: pressed ? 0.6 : 1 },
-          ]}
-        >
-          <MaterialCommunityIcons
-            name="bluetooth-connect"
-            size={28}
-            color={accentColor + "88"}
-          />
-          <Text style={[styles.connectText, { color: colors.mutedForeground }]}>
-            Tap to pair {side === "left" ? "Left" : "Right"} JoyCon
+        <View style={[styles.disconnectedHint, { borderColor: accentColor + "33" }]}>
+          <MaterialCommunityIcons name="gesture-tap" size={20} color={accentColor + "66"} />
+          <Text style={[styles.disconnectedText, { color: colors.mutedForeground }]}>
+            Tap name to select device
           </Text>
-        </Pressable>
+        </View>
       )}
     </Animated.View>
   );
@@ -224,14 +163,8 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 12,
-  },
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "center",
     gap: 8,
-    flex: 1,
+    marginBottom: 12,
   },
   sideTag: {
     width: 24,
@@ -239,44 +172,22 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     alignItems: "center",
     justifyContent: "center",
+    flexShrink: 0,
   },
   sideTagText: {
     fontSize: 13,
     fontWeight: "800" as const,
     fontFamily: "Inter_700Bold",
   },
-  statusDot: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    flex: 1,
-  },
-  dot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-  },
-  deviceName: {
-    fontSize: 11,
-    fontFamily: "Inter_500Medium",
-    flex: 1,
-  },
-  headerRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
   battery: {
     flexDirection: "row",
     alignItems: "center",
     gap: 2,
+    flexShrink: 0,
   },
   batteryText: {
     fontSize: 10,
     fontFamily: "Inter_400Regular",
-  },
-  iconBtn: {
-    padding: 2,
   },
   inputArea: {
     flexDirection: "row",
@@ -299,7 +210,6 @@ const styles = StyleSheet.create({
   dpadRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 0,
   },
   dpadCenter: {
     width: 8,
@@ -307,29 +217,27 @@ const styles = StyleSheet.create({
   },
   abxyGrid: {
     alignItems: "center",
-    gap: 0,
   },
   abxyRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 0,
   },
   smallButtons: {
     flexDirection: "row",
     justifyContent: "center",
     gap: 4,
   },
-  connectPrompt: {
+  disconnectedHint: {
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
+    gap: 7,
     paddingVertical: 16,
     borderRadius: 10,
     borderWidth: 1,
     borderStyle: "dashed",
   },
-  connectText: {
-    fontSize: 12,
+  disconnectedText: {
+    fontSize: 11,
     fontFamily: "Inter_400Regular",
     textAlign: "center",
   },

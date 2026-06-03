@@ -15,7 +15,7 @@ import { useColors } from "@/hooks/useColors";
 export function BridgePanel() {
   const colors = useColors();
   const router = useRouter();
-  const { status, stats, config, connect, disconnect } = useBridge();
+  const { status, stats, config, connect, disconnect, updateConfig } = useBridge();
 
   const isConnected = status === "connected";
   const isConnecting = status === "connecting";
@@ -35,11 +35,18 @@ export function BridgePanel() {
 
   const handleToggle = () => {
     Haptics.selectionAsync().catch(() => {});
-    if (isConnected || isConnecting) {
-      disconnect();
-    } else {
-      connect();
-    }
+    if (isConnected || isConnecting) disconnect();
+    else connect();
+  };
+
+  const handleToggleAdb = () => {
+    Haptics.selectionAsync().catch(() => {});
+    updateConfig({ adbMode: !config.adbMode });
+  };
+
+  const handleQr = () => {
+    Haptics.selectionAsync().catch(() => {});
+    router.push("/qr-scan");
   };
 
   const formatBytes = (b: number) => {
@@ -48,84 +55,147 @@ export function BridgePanel() {
     return `${(b / 1024 / 1024).toFixed(1)}MB`;
   };
 
+  const effectiveHost = config.adbMode ? "localhost" : config.host;
+
   return (
     <View style={[styles.panel, { backgroundColor: colors.card, borderColor: colors.border }]}>
-      <View style={styles.row}>
-        <View style={styles.left}>
-          <Animated.View style={[styles.statusDot, { backgroundColor: statusColor }, pulseStyle]} />
-          <View>
+      <View style={styles.topRow}>
+        <Animated.View style={[styles.statusDot, { backgroundColor: statusColor }, pulseStyle]} />
+        <View style={styles.addressBlock}>
+          <View style={styles.hostRow}>
             <Text style={[styles.hostText, { color: colors.foreground }]}>
-              {config.host}:{config.port}
+              {effectiveHost}:{config.port}
             </Text>
-            <Text style={[styles.statusLabel, { color: colors.mutedForeground }]}>
-              {status === "connected"
-                ? "PC Bridge"
-                : status === "connecting"
-                ? "Connecting…"
-                : status === "error"
-                ? "Connection failed"
-                : "USB / Network Bridge"}
-            </Text>
+            {config.adbMode && (
+              <View style={[styles.adbBadge, { backgroundColor: colors.accent + "22", borderColor: colors.accent + "55" }]}>
+                <MaterialCommunityIcons name="usb" size={10} color={colors.accent} />
+                <Text style={[styles.adbBadgeText, { color: colors.accent }]}>ADB</Text>
+              </View>
+            )}
           </View>
+          <Text style={[styles.statusLabel, { color: colors.mutedForeground }]}>
+            {status === "connected"
+              ? "PC Bridge active"
+              : status === "connecting"
+              ? "Connecting…"
+              : status === "error"
+              ? "Connection failed — retrying"
+              : config.adbMode
+              ? "USB (ADB reverse) mode"
+              : "WiFi / USB Network Bridge"}
+          </Text>
         </View>
 
-        <View style={styles.right}>
-          {isConnected && (
-            <View style={styles.statsRow}>
-              <StatChip label={`${stats.latencyMs}ms`} color={colors.mutedForeground} />
-              <StatChip label={`${stats.inputRateHz}Hz`} color={colors.mutedForeground} />
-              <StatChip label={formatBytes(stats.bytesSent)} color={colors.mutedForeground} />
-            </View>
-          )}
-          <View style={styles.actions}>
-            <Pressable
-              onPress={() => router.push("/settings")}
-              hitSlop={12}
-              style={({ pressed }) => [styles.iconBtn, { opacity: pressed ? 0.5 : 1 }]}
-            >
-              <MaterialCommunityIcons
-                name="cog-outline"
-                size={20}
-                color={colors.mutedForeground}
-              />
-            </Pressable>
-            <Pressable
-              onPress={handleToggle}
-              style={({ pressed }) => [
-                styles.connectBtn,
-                {
-                  backgroundColor: isConnected
-                    ? colors.destructive + "22"
-                    : colors.primary + "22",
-                  borderColor: isConnected ? colors.destructive : colors.primary,
-                  opacity: pressed ? 0.6 : 1,
-                },
-              ]}
-            >
-              <MaterialCommunityIcons
-                name={isConnected ? "lan-disconnect" : "lan-connect"}
-                size={16}
-                color={isConnected ? colors.destructive : colors.primary}
-              />
-              <Text
-                style={[
-                  styles.connectBtnText,
-                  { color: isConnected ? colors.destructive : colors.primary },
-                ]}
-              >
-                {isConnected ? "Disconnect" : isConnecting ? "Cancel" : "Connect"}
-              </Text>
-            </Pressable>
-          </View>
+        <View style={styles.actions}>
+          <Pressable
+            onPress={handleQr}
+            hitSlop={10}
+            style={({ pressed }) => [styles.iconBtn, { opacity: pressed ? 0.5 : 1 }]}
+          >
+            <MaterialCommunityIcons name="qrcode-scan" size={20} color={colors.mutedForeground} />
+          </Pressable>
+
+          <Pressable
+            onPress={handleToggleAdb}
+            hitSlop={10}
+            style={({ pressed }) => [
+              styles.iconBtnRound,
+              {
+                backgroundColor: config.adbMode ? colors.accent + "22" : "transparent",
+                borderColor: config.adbMode ? colors.accent + "66" : colors.border,
+                opacity: pressed ? 0.5 : 1,
+              },
+            ]}
+          >
+            <MaterialCommunityIcons
+              name="usb"
+              size={17}
+              color={config.adbMode ? colors.accent : colors.mutedForeground}
+            />
+          </Pressable>
+
+          <Pressable
+            onPress={() => { router.push("/settings"); Haptics.selectionAsync().catch(() => {}); }}
+            hitSlop={10}
+            style={({ pressed }) => [styles.iconBtn, { opacity: pressed ? 0.5 : 1 }]}
+          >
+            <MaterialCommunityIcons name="cog-outline" size={20} color={colors.mutedForeground} />
+          </Pressable>
         </View>
       </View>
+
+      {isConnected && (
+        <View style={[styles.statsRow, { borderTopColor: colors.border }]}>
+          <StatChip icon="timer-outline" label={`${stats.latencyMs}ms`} colors={colors} />
+          <StatChip icon="pulse" label={`${stats.inputRateHz}Hz`} colors={colors} />
+          <StatChip icon="database-outline" label={formatBytes(stats.bytesSent)} colors={colors} />
+          {stats.packetsDropped > 0 && (
+            <StatChip icon="alert-circle-outline" label={`${stats.packetsDropped} dropped`} colors={colors} warn />
+          )}
+          <View style={{ flex: 1 }} />
+          <Pressable
+            onPress={handleToggle}
+            style={({ pressed }) => [
+              styles.disconnectBtn,
+              { borderColor: colors.destructive + "55", opacity: pressed ? 0.6 : 1 },
+            ]}
+          >
+            <Text style={[styles.disconnectText, { color: colors.destructive }]}>Disconnect</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {!isConnected && (
+        <View style={[styles.connectRow, { borderTopColor: colors.border }]}>
+          {config.adbMode && !isConnecting && (
+            <View style={[styles.adbHint, { backgroundColor: colors.accent + "10" }]}>
+              <MaterialCommunityIcons name="information-outline" size={12} color={colors.accent} />
+              <Text style={[styles.adbHintText, { color: colors.accent }]}>
+                Run: <Text style={styles.adbHintCode}>adb reverse tcp:{config.port} tcp:{config.port}</Text>
+              </Text>
+            </View>
+          )}
+          <Pressable
+            onPress={handleToggle}
+            style={({ pressed }) => [
+              styles.connectBtn,
+              {
+                backgroundColor: isConnecting ? "#f5a62322" : colors.primary + "22",
+                borderColor: isConnecting ? "#f5a623" : colors.primary,
+                opacity: pressed ? 0.6 : 1,
+              },
+            ]}
+          >
+            <MaterialCommunityIcons
+              name="lan-connect"
+              size={16}
+              color={isConnecting ? "#f5a623" : colors.primary}
+            />
+            <Text style={[styles.connectBtnText, { color: isConnecting ? "#f5a623" : colors.primary }]}>
+              {isConnecting ? "Cancel" : "Connect"}
+            </Text>
+          </Pressable>
+        </View>
+      )}
     </View>
   );
 }
 
-function StatChip({ label, color }: { label: string; color: string }) {
+function StatChip({
+  icon,
+  label,
+  colors,
+  warn,
+}: {
+  icon: string;
+  label: string;
+  colors: ReturnType<typeof useColors>;
+  warn?: boolean;
+}) {
+  const color = warn ? colors.destructive : colors.mutedForeground;
   return (
     <View style={styles.statChip}>
+      <MaterialCommunityIcons name={icon as any} size={11} color={color} />
       <Text style={[styles.statText, { color }]}>{label}</Text>
     </View>
   );
@@ -134,72 +204,133 @@ function StatChip({ label, color }: { label: string; color: string }) {
 const styles = StyleSheet.create({
   panel: {
     borderRadius: 16,
-    padding: 14,
     borderWidth: 1,
+    overflow: "hidden",
   },
-  row: {
+  topRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  left: {
-    flexDirection: "row",
-    alignItems: "center",
+    padding: 14,
     gap: 10,
-    flex: 1,
   },
   statusDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
   },
+  addressBlock: {
+    flex: 1,
+  },
+  hostRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+  },
   hostText: {
     fontSize: 14,
     fontFamily: "Inter_600SemiBold",
+  },
+  adbBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 5,
+    borderWidth: 1,
+  },
+  adbBadgeText: {
+    fontSize: 9,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 0.5,
   },
   statusLabel: {
     fontSize: 11,
     fontFamily: "Inter_400Regular",
     marginTop: 1,
   },
-  right: {
-    alignItems: "flex-end",
-    gap: 6,
-  },
-  statsRow: {
-    flexDirection: "row",
-    gap: 4,
-  },
-  statChip: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    backgroundColor: "#2a2a32",
-    borderRadius: 4,
-  },
-  statText: {
-    fontSize: 10,
-    fontFamily: "Inter_500Medium",
-  },
   actions: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
   },
-  iconBtn: {
-    padding: 2,
+  iconBtn: {},
+  iconBtnRound: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  statsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  statChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    backgroundColor: "#2a2a32",
+    borderRadius: 5,
+  },
+  statText: {
+    fontSize: 10,
+    fontFamily: "Inter_500Medium",
+  },
+  disconnectBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 7,
+    borderWidth: 1,
+  },
+  disconnectText: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+  },
+  connectRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    gap: 10,
+  },
+  adbHint: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  adbHintText: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+  },
+  adbHintCode: {
+    fontFamily: "Inter_600SemiBold",
   },
   connectBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 9,
     borderWidth: 1,
   },
   connectBtnText: {
-    fontSize: 12,
+    fontSize: 13,
     fontFamily: "Inter_600SemiBold",
   },
 });
