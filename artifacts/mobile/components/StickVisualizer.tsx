@@ -1,5 +1,6 @@
-import React from "react";
-import { StyleSheet, View } from "react-native";
+import * as Haptics from "expo-haptics";
+import React, { useMemo, useRef } from "react";
+import { PanResponder, StyleSheet, View } from "react-native";
 import Animated, {
   useAnimatedStyle,
   withSpring,
@@ -10,13 +11,57 @@ interface Props {
   y: number;
   color: string;
   size?: number;
+  onMove?: (x: number, y: number) => void;
+  onRelease?: () => void;
 }
 
 const KNOB_RATIO = 0.38;
 
-export function StickVisualizer({ x, y, color, size = 64 }: Props) {
+export function StickVisualizer({
+  x,
+  y,
+  color,
+  size = 64,
+  onMove,
+  onRelease,
+}: Props) {
   const knobSize = size * KNOB_RATIO;
   const travel = (size - knobSize) / 2;
+
+  // Keep latest callbacks in refs so the PanResponder (created once) always calls current versions
+  const onMoveRef = useRef(onMove);
+  const onReleaseRef = useRef(onRelease);
+  onMoveRef.current = onMove;
+  onReleaseRef.current = onRelease;
+
+  const draggingRef = useRef(false);
+
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => !!onMoveRef.current,
+        onMoveShouldSetPanResponder: () => !!onMoveRef.current,
+        onPanResponderGrant: () => {
+          draggingRef.current = true;
+          Haptics.selectionAsync().catch(() => {});
+        },
+        onPanResponderMove: (_, gs) => {
+          const nx = Math.max(-1, Math.min(1, gs.dx / travel));
+          const ny = Math.max(-1, Math.min(1, -gs.dy / travel)); // flip Y: up = positive
+          onMoveRef.current?.(nx, ny);
+        },
+        onPanResponderRelease: () => {
+          draggingRef.current = false;
+          onReleaseRef.current?.();
+        },
+        onPanResponderTerminate: () => {
+          draggingRef.current = false;
+          onReleaseRef.current?.();
+        },
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [travel]
+  );
 
   const animStyle = useAnimatedStyle(() => ({
     transform: [
@@ -25,15 +70,19 @@ export function StickVisualizer({ x, y, color, size = 64 }: Props) {
     ],
   }));
 
+  const interactive = !!onMove;
+
   return (
     <View
+      {...(interactive ? panResponder.panHandlers : {})}
       style={[
         styles.track,
         {
           width: size,
           height: size,
           borderRadius: size / 2,
-          borderColor: color + "55",
+          borderColor: interactive ? color + "88" : color + "55",
+          borderWidth: interactive ? 2 : 1.5,
         },
       ]}
     >
@@ -67,7 +116,6 @@ export function StickVisualizer({ x, y, color, size = 64 }: Props) {
 
 const styles = StyleSheet.create({
   track: {
-    borderWidth: 1.5,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#0a0a0c",

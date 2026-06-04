@@ -1,5 +1,6 @@
+import * as Haptics from "expo-haptics";
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text } from "react-native";
 import Animated, {
   useAnimatedStyle,
   withSpring,
@@ -10,16 +11,22 @@ interface Props {
   active: boolean;
   color: string;
   size?: number;
+  onPressIn?: () => void;
+  onPressOut?: () => void;
 }
 
-export function ButtonDot({ label, active, color, size = 22 }: Props) {
+export function ButtonDot({
+  label,
+  active,
+  color,
+  size = 22,
+  onPressIn,
+  onPressOut,
+}: Props) {
   const animStyle = useAnimatedStyle(() => ({
     transform: [
       {
-        scale: withSpring(active ? 1.15 : 1, {
-          damping: 14,
-          stiffness: 400,
-        }),
+        scale: withSpring(active ? 1.18 : 1, { damping: 12, stiffness: 500 }),
       },
     ],
     opacity: withSpring(active ? 1 : 0.28, { damping: 18, stiffness: 300 }),
@@ -29,16 +36,29 @@ export function ButtonDot({ label, active, color, size = 22 }: Props) {
     }),
   }));
 
+  const handlePressIn = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    onPressIn?.();
+  };
+
+  const handlePressOut = () => {
+    onPressOut?.();
+  };
+
   return (
-    <View style={styles.wrapper}>
+    <Pressable
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      style={[
+        styles.touchTarget,
+        { width: Math.max(size, 32), height: Math.max(size, 32) },
+      ]}
+      hitSlop={6}
+    >
       <Animated.View
         style={[
           animStyle,
-          {
-            width: size,
-            height: size,
-            borderRadius: size / 2,
-          },
+          { width: size, height: size, borderRadius: size / 2 },
           styles.dot,
         ]}
       >
@@ -51,15 +71,15 @@ export function ButtonDot({ label, active, color, size = 22 }: Props) {
           {label}
         </Text>
       </Animated.View>
-    </View>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  wrapper: {
+  touchTarget: {
     alignItems: "center",
     justifyContent: "center",
-    margin: 2,
+    margin: 1,
   },
   dot: {
     alignItems: "center",
