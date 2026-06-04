@@ -1,0 +1,13 @@
+{
+  "name": "joycon-input",
+  "version": "1.0.0",
+  "description": "Native Android gamepad input module for JoyCon Bridge",
+  "main": "index.ts",
+  "types": "index.ts",
+  "scripts": {
+    "build": "expo-module build"
+  },
+  "peerDependencies": {
+    "expo": "*"
+  }
+}

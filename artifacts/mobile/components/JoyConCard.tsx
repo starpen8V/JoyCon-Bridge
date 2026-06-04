@@ -23,7 +23,7 @@ interface Props {
 
 export function JoyConCard({ side }: Props) {
   const colors = useColors();
-  const { leftJoyCon, rightJoyCon } = useJoyCon();
+  const { leftJoyCon, rightJoyCon, pressButton, releaseButton, moveStick, releaseStick } = useJoyCon();
   const joycon = side === "left" ? leftJoyCon : rightJoyCon;
   const accentColor = side === "left" ? colors.leftJoyCon : colors.rightJoyCon;
   const pulseAnim = useSharedValue(0);
@@ -56,6 +56,12 @@ export function JoyConCard({ side }: Props) {
       : joycon.batteryLevel > 35
       ? "battery-medium"
       : "battery-low";
+
+  // Helpers to wire button handlers
+  const btn = (button: string) => ({
+    onPressIn:  () => pressButton(side, button),
+    onPressOut: () => releaseButton(side, button),
+  });
 
   return (
     <Animated.View style={[styles.card, { backgroundColor: colors.card }, cardAnimStyle]}>
@@ -92,22 +98,24 @@ export function JoyConCard({ side }: Props) {
                   y={joycon.leftStick.y}
                   color={accentColor}
                   size={56}
+                  onMove={(x, y) => moveStick("left", "left", x, y)}
+                  onRelease={() => releaseStick("left", "left")}
                 />
               </View>
               <View style={styles.buttonsSection}>
                 <View style={styles.dpad}>
-                  <ButtonDot label="U" active={joycon.leftButtons.up} color={accentColor} size={20} />
+                  <ButtonDot label="U" active={joycon.leftButtons.up}    color={accentColor} size={20} {...btn("up")} />
                   <View style={styles.dpadRow}>
-                    <ButtonDot label="L" active={joycon.leftButtons.left} color={accentColor} size={20} />
+                    <ButtonDot label="L" active={joycon.leftButtons.left}  color={accentColor} size={20} {...btn("left")} />
                     <View style={styles.dpadCenter} />
-                    <ButtonDot label="R" active={joycon.leftButtons.right} color={accentColor} size={20} />
+                    <ButtonDot label="R" active={joycon.leftButtons.right} color={accentColor} size={20} {...btn("right")} />
                   </View>
-                  <ButtonDot label="D" active={joycon.leftButtons.down} color={accentColor} size={20} />
+                  <ButtonDot label="D" active={joycon.leftButtons.down}  color={accentColor} size={20} {...btn("down")} />
                 </View>
                 <View style={styles.smallButtons}>
-                  <ButtonDot label="−" active={joycon.leftButtons.minus} color={accentColor} size={20} />
-                  <ButtonDot label="L" active={joycon.leftButtons.l} color={accentColor} size={20} />
-                  <ButtonDot label="ZL" active={joycon.leftButtons.zl} color={accentColor} size={20} />
+                  <ButtonDot label="−"  active={joycon.leftButtons.minus}   color={accentColor} size={20} {...btn("minus")} />
+                  <ButtonDot label="L"  active={joycon.leftButtons.l}        color={accentColor} size={20} {...btn("l")} />
+                  <ButtonDot label="ZL" active={joycon.leftButtons.zl}       color={accentColor} size={20} {...btn("zl")} />
                 </View>
               </View>
             </>
@@ -115,18 +123,18 @@ export function JoyConCard({ side }: Props) {
             <>
               <View style={styles.buttonsSection}>
                 <View style={styles.abxyGrid}>
-                  <ButtonDot label="X" active={joycon.rightButtons.x} color={accentColor} size={20} />
+                  <ButtonDot label="X" active={joycon.rightButtons.x} color={accentColor} size={20} {...btn("x")} />
                   <View style={styles.abxyRow}>
-                    <ButtonDot label="Y" active={joycon.rightButtons.y} color={accentColor} size={20} />
+                    <ButtonDot label="Y" active={joycon.rightButtons.y} color={accentColor} size={20} {...btn("y")} />
                     <View style={styles.dpadCenter} />
-                    <ButtonDot label="A" active={joycon.rightButtons.a} color={accentColor} size={20} />
+                    <ButtonDot label="A" active={joycon.rightButtons.a} color={accentColor} size={20} {...btn("a")} />
                   </View>
-                  <ButtonDot label="B" active={joycon.rightButtons.b} color={accentColor} size={20} />
+                  <ButtonDot label="B" active={joycon.rightButtons.b} color={accentColor} size={20} {...btn("b")} />
                 </View>
                 <View style={styles.smallButtons}>
-                  <ButtonDot label="+" active={joycon.rightButtons.plus} color={accentColor} size={20} />
-                  <ButtonDot label="R" active={joycon.rightButtons.r} color={accentColor} size={20} />
-                  <ButtonDot label="ZR" active={joycon.rightButtons.zr} color={accentColor} size={20} />
+                  <ButtonDot label="+"  active={joycon.rightButtons.plus} color={accentColor} size={20} {...btn("plus")} />
+                  <ButtonDot label="R"  active={joycon.rightButtons.r}    color={accentColor} size={20} {...btn("r")} />
+                  <ButtonDot label="ZR" active={joycon.rightButtons.zr}   color={accentColor} size={20} {...btn("zr")} />
                 </View>
               </View>
               <View style={styles.stickSection}>
@@ -135,6 +143,8 @@ export function JoyConCard({ side }: Props) {
                   y={joycon.rightStick.y}
                   color={accentColor}
                   size={56}
+                  onMove={(x, y) => moveStick("right", "right", x, y)}
+                  onRelease={() => releaseStick("right", "right")}
                 />
               </View>
             </>

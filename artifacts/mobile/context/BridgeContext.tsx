@@ -14,7 +14,7 @@ import {
   BridgeStatus,
   DEFAULT_BRIDGE_CONFIG,
 } from "@/services/bridge-service";
-import { RumbleCommand } from "@/services/joycon-protocol";
+import { ProControllerReport, RumbleCommand } from "@/services/joycon-protocol";
 
 const STORAGE_KEY = "@joycon_bridge_config";
 
@@ -25,6 +25,7 @@ interface BridgeContextValue {
   connect: () => void;
   disconnect: () => void;
   updateConfig: (c: Partial<BridgeConfig>) => void;
+  sendReport: (report: ProControllerReport) => void;
   onRumble: (listener: (cmd: RumbleCommand) => void) => () => void;
 }
 
@@ -76,6 +77,10 @@ export function BridgeProvider({ children }: { children: React.ReactNode }) {
     serviceRef.current?.disconnect();
   }, []);
 
+  const sendReport = useCallback((report: ProControllerReport) => {
+    serviceRef.current?.sendReport(report);
+  }, []);
+
   const updateConfig = useCallback((partial: Partial<BridgeConfig>) => {
     setConfig((prev) => {
       const next = { ...prev, ...partial };
@@ -94,7 +99,7 @@ export function BridgeProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <BridgeContext.Provider
-      value={{ status, stats, config, connect, disconnect, updateConfig, onRumble }}
+      value={{ status, stats, config, connect, disconnect, updateConfig, sendReport, onRumble }}
     >
       {children}
     </BridgeContext.Provider>

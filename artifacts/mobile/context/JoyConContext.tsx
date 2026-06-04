@@ -7,13 +7,21 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { Platform } from "react-native";
 import {
   JoyConSide,
   JoyConState,
   RumbleCommand,
   ScannedDevice,
   emptyJoyConState,
+  identifyJoyCon,
 } from "@/services/joycon-protocol";
+import {
+  addJoyConInputListener,
+  getConnectedJoyConDevices,
+  JoyConAxisEvent,
+  JoyConButtonEvent,
+} from "../modules/joycon-input";
 
 const KNOWN_DEVICES_KEY = "@joycon_known_devices";
 const MAX_KNOWN = 6;
@@ -116,6 +124,8 @@ export function JoyConProvider({ children }: { children: React.ReactNode }) {
     [persistKnown]
   );
 
+  // ── Simulation loop ────────────────────────────────────────────────────────
+
   const runSimulation = useCallback(() => {
     simSeq++;
     const t = simSeq * 0.05;
@@ -208,13 +218,114 @@ export function JoyConProvider({ children }: { children: React.ReactNode }) {
     };
   }, [simulationMode, runSimulation]);
 
+  // ── Real Android hardware input ────────────────────────────────────────────
+  // When simulation is OFF and running on Android, read actual gamepad events
+  // from JoyCons paired via system Bluetooth settings.
+
+  useEffect(() => {
+    if (simulationMode || Platform.OS !== "android") return;
+
+    // Detect already-connected JoyCons
+    const devices = getConnectedJoyConDevices();
+    for (const dev of devices) {
+      if (dev.side === "left" || dev.side === "right") {
+        const side = dev.side;
+        const newState: JoyConState = {
+          ...emptyJoyConState(side),
+          connected: true,
+          deviceName: dev.name,
+          deviceAddress: String(dev.deviceId),
+          batteryLevel: 100, // Android doesn't expose JoyCon battery level
+        };
+        if (side === "left") setLeftJoyCon(newState);
+        else setRightJoyCon(newState);
+      }
+    }
+
+    // Subscribe to live input events
+    const sub = addJoyConInputListener((event) => {
+      if (event.type === "button") {
+        const e = event as JoyConButtonEvent;
+        const side: JoyConSide =
+          e.side === "left" ? "left" : e.side === "right" ? "right" : "left";
+
+        if (side === "left") {
+          setLeftJoyCon((prev) => ({
+            ...prev,
+            leftButtons: { ...prev.leftButtons, [e.button]: e.pressed },
+          }));
+        } else {
+          setRightJoyCon((prev) => ({
+            ...prev,
+            rightButtons: { ...prev.rightButtons, [e.button]: e.pressed },
+          }));
+        }
+      } else if (event.type === "axis") {
+        const e = event as JoyConAxisEvent;
+
+        if (e.side === "left") {
+          setLeftJoyCon((prev) => {
+            // Android reports hat (d-pad) separately from stick
+            const hasHat = Math.abs(e.hatX) > 0.1 || Math.abs(e.hatY) > 0.1;
+            const newButtons = hasHat
+              ? {
+                  ...prev.leftButtons,
+                  up:    e.hatY < -0.5,
+                  down:  e.hatY > 0.5,
+                  left:  e.hatX < -0.5,
+                  right: e.hatX > 0.5,
+                }
+              : prev.leftButtons;
+
+            return {
+              ...prev,
+              // Joy-Con L stick may come as AXIS_X/Y or AXIS_Z/RZ depending on
+              // Android mapping — use whichever has larger magnitude
+              leftStick: {
+                x: Math.abs(e.x) >= Math.abs(e.z) ? e.x : e.z,
+                y: -(Math.abs(e.y) >= Math.abs(e.rz) ? e.y : e.rz),
+              },
+              leftButtons: newButtons,
+            };
+          });
+        } else if (e.side === "right") {
+          setRightJoyCon((prev) => ({
+            ...prev,
+            rightStick: {
+              x: Math.abs(e.x) >= Math.abs(e.z) ? e.x : e.z,
+              y: -(Math.abs(e.y) >= Math.abs(e.rz) ? e.y : e.rz),
+            },
+          }));
+        }
+      }
+    });
+
+    return () => sub.remove();
+  }, [simulationMode]);
+
+  // ── Scanning ───────────────────────────────────────────────────────────────
+
   const startScan = useCallback(() => {
     setIsScanning(true);
     setScannedDevices([]);
-    setTimeout(() => setScannedDevices(FAKE_DEVICES.slice(0, 1)), 800);
-    setTimeout(() => setScannedDevices(FAKE_DEVICES), 1600);
-    scanTimerRef.current = setTimeout(() => setIsScanning(false), 10000);
-  }, []);
+
+    if (!simulationMode && Platform.OS === "android") {
+      // On real hardware, show already-paired JoyCons
+      const devices = getConnectedJoyConDevices().map((d) => ({
+        address: String(d.deviceId),
+        name: d.name,
+        rssi: -60,
+        side: identifyJoyCon(d.name),
+      }));
+      setScannedDevices(devices);
+      setTimeout(() => setIsScanning(false), 2000);
+    } else {
+      // Simulation scan
+      setTimeout(() => setScannedDevices(FAKE_DEVICES.slice(0, 1)), 800);
+      setTimeout(() => setScannedDevices(FAKE_DEVICES), 1600);
+      scanTimerRef.current = setTimeout(() => setIsScanning(false), 10000);
+    }
+  }, [simulationMode]);
 
   const stopScan = useCallback(() => {
     setIsScanning(false);
@@ -255,6 +366,8 @@ export function JoyConProvider({ children }: { children: React.ReactNode }) {
       setTimeout(() => setRightJoyCon((prev) => ({ ...prev, rumbling: false })), cmd.durationMs);
     }
   }, []);
+
+  // ── Manual interactive overrides (used by ButtonDot / StickVisualizer) ─────
 
   const pressButton = useCallback((side: JoyConSide, button: string) => {
     if (side === "left") {

@@ -54,7 +54,8 @@
         {
           "cameraPermission": "JoyCon Bridge needs camera access to scan the PC bridge QR code."
         }
-      ]
+      ],
+      "./modules/joycon-input/plugin/withJoyConInput"
     ],
     "experiments": {
       "typedRoutes": true,

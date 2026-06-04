@@ -20,7 +20,7 @@ import { RumbleTestPanel } from "@/components/RumbleTestPanel";
 import { useBridge } from "@/context/BridgeContext";
 import { useJoyCon } from "@/context/JoyConContext";
 import { useColors } from "@/hooks/useColors";
-import { buildProControllerReport } from "@/services/joycon-protocol";
+import { useInputForwarder } from "@/hooks/useInputForwarder";
 
 let inputSeq = 0;
 const INPUT_INTERVAL_MS = 16;
@@ -34,6 +34,9 @@ export default function HomeScreen() {
 
   const bridgeConnected = status === "connected";
   const bothConnected = leftJoyCon.connected && rightJoyCon.connected;
+
+  // Forward JoyCon input to PC bridge at ~60 Hz when connected
+  useInputForwarder();
 
   return (
     <View
