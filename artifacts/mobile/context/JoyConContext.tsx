@@ -37,6 +37,10 @@ interface JoyConContextValue {
   applyRumble: (cmd: RumbleCommand) => void;
   setSimulationMode: (enabled: boolean) => void;
   forgetDevice: (device: ScannedDevice) => void;
+  pressButton: (side: JoyConSide, button: string) => void;
+  releaseButton: (side: JoyConSide, button: string) => void;
+  moveStick: (side: JoyConSide, which: "left" | "right", x: number, y: number) => void;
+  releaseStick: (side: JoyConSide, which: "left" | "right") => void;
 }
 
 const JoyConContext = createContext<JoyConContextValue | null>(null);
@@ -58,6 +62,12 @@ export function JoyConProvider({ children }: { children: React.ReactNode }) {
 
   const simIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const scanTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Manual override refs — sim loop checks these and skips auto-update for held inputs
+  const heldLeft = useRef<Set<string>>(new Set());
+  const heldRight = useRef<Set<string>>(new Set());
+  const manualLeftStick = useRef<{ x: number; y: number } | null>(null);
+  const manualRightStick = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     AsyncStorage.getItem(KNOWN_DEVICES_KEY).then((raw) => {
@@ -109,25 +119,30 @@ export function JoyConProvider({ children }: { children: React.ReactNode }) {
   const runSimulation = useCallback(() => {
     simSeq++;
     const t = simSeq * 0.05;
+    const hl = heldLeft.current;
+    const hr = heldRight.current;
 
     setLeftJoyCon((prev) => {
       if (!prev.connected) return prev;
       return {
         ...prev,
-        leftStick: {
+        leftStick: manualLeftStick.current ?? {
           x: Math.sin(t * 0.7) * 0.5,
           y: Math.cos(t * 0.9) * 0.5,
         },
         leftButtons: {
           ...prev.leftButtons,
-          l: (simSeq % 120) < 30,
-          zl: (simSeq % 180) < 20,
-          minus: (simSeq % 200) < 10,
-          up: (simSeq % 90) < 15,
-          down: (simSeq % 110) < 15,
-          left: (simSeq % 130) < 15,
-          right: (simSeq % 150) < 15,
-          ls: (simSeq % 300) < 8,
+          l:       hl.has("l")       ? prev.leftButtons.l       : (simSeq % 120) < 30,
+          zl:      hl.has("zl")      ? prev.leftButtons.zl      : (simSeq % 180) < 20,
+          minus:   hl.has("minus")   ? prev.leftButtons.minus   : (simSeq % 200) < 10,
+          up:      hl.has("up")      ? prev.leftButtons.up      : (simSeq % 90)  < 15,
+          down:    hl.has("down")    ? prev.leftButtons.down    : (simSeq % 110) < 15,
+          left:    hl.has("left")    ? prev.leftButtons.left    : (simSeq % 130) < 15,
+          right:   hl.has("right")   ? prev.leftButtons.right   : (simSeq % 150) < 15,
+          ls:      hl.has("ls")      ? prev.leftButtons.ls      : (simSeq % 300) < 8,
+          sl:      prev.leftButtons.sl,
+          sr:      prev.leftButtons.sr,
+          capture: hl.has("capture") ? prev.leftButtons.capture : (simSeq % 400) < 5,
         },
         gyro: {
           x: Math.sin(t * 1.2) * 0.3,
@@ -141,21 +156,23 @@ export function JoyConProvider({ children }: { children: React.ReactNode }) {
       if (!prev.connected) return prev;
       return {
         ...prev,
-        rightStick: {
+        rightStick: manualRightStick.current ?? {
           x: Math.sin(t * 1.1) * 0.4,
           y: Math.cos(t * 0.6) * 0.4,
         },
         rightButtons: {
           ...prev.rightButtons,
-          a: (simSeq % 80) < 20,
-          b: (simSeq % 100) < 15,
-          x: (simSeq % 140) < 10,
-          y: (simSeq % 160) < 10,
-          r: (simSeq % 120) < 25,
-          zr: (simSeq % 170) < 18,
-          plus: (simSeq % 250) < 8,
-          home: (simSeq % 400) < 5,
-          rs: (simSeq % 320) < 6,
+          a:    hr.has("a")    ? prev.rightButtons.a    : (simSeq % 80)  < 20,
+          b:    hr.has("b")    ? prev.rightButtons.b    : (simSeq % 100) < 15,
+          x:    hr.has("x")   ? prev.rightButtons.x    : (simSeq % 140) < 10,
+          y:    hr.has("y")   ? prev.rightButtons.y    : (simSeq % 160) < 10,
+          r:    hr.has("r")    ? prev.rightButtons.r    : (simSeq % 120) < 25,
+          zr:   hr.has("zr")   ? prev.rightButtons.zr   : (simSeq % 170) < 18,
+          plus: hr.has("plus") ? prev.rightButtons.plus : (simSeq % 250) < 8,
+          home: hr.has("home") ? prev.rightButtons.home : (simSeq % 400) < 5,
+          rs:   hr.has("rs")   ? prev.rightButtons.rs   : (simSeq % 320) < 6,
+          sl:   prev.rightButtons.sl,
+          sr:   prev.rightButtons.sr,
         },
       };
     });
@@ -239,6 +256,64 @@ export function JoyConProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const pressButton = useCallback((side: JoyConSide, button: string) => {
+    if (side === "left") {
+      heldLeft.current.add(button);
+      setLeftJoyCon((prev) => ({
+        ...prev,
+        leftButtons: { ...prev.leftButtons, [button]: true },
+      }));
+    } else {
+      heldRight.current.add(button);
+      setRightJoyCon((prev) => ({
+        ...prev,
+        rightButtons: { ...prev.rightButtons, [button]: true },
+      }));
+    }
+  }, []);
+
+  const releaseButton = useCallback((side: JoyConSide, button: string) => {
+    if (side === "left") {
+      heldLeft.current.delete(button);
+      setLeftJoyCon((prev) => ({
+        ...prev,
+        leftButtons: { ...prev.leftButtons, [button]: false },
+      }));
+    } else {
+      heldRight.current.delete(button);
+      setRightJoyCon((prev) => ({
+        ...prev,
+        rightButtons: { ...prev.rightButtons, [button]: false },
+      }));
+    }
+  }, []);
+
+  const moveStick = useCallback(
+    (side: JoyConSide, which: "left" | "right", x: number, y: number) => {
+      if (which === "left") {
+        manualLeftStick.current = { x, y };
+        setLeftJoyCon((prev) => ({ ...prev, leftStick: { x, y } }));
+      } else {
+        manualRightStick.current = { x, y };
+        setRightJoyCon((prev) => ({ ...prev, rightStick: { x, y } }));
+      }
+    },
+    []
+  );
+
+  const releaseStick = useCallback(
+    (_side: JoyConSide, which: "left" | "right") => {
+      if (which === "left") {
+        manualLeftStick.current = null;
+        setLeftJoyCon((prev) => ({ ...prev, leftStick: { x: 0, y: 0 } }));
+      } else {
+        manualRightStick.current = null;
+        setRightJoyCon((prev) => ({ ...prev, rightStick: { x: 0, y: 0 } }));
+      }
+    },
+    []
+  );
+
   return (
     <JoyConContext.Provider
       value={{
@@ -255,6 +330,10 @@ export function JoyConProvider({ children }: { children: React.ReactNode }) {
         applyRumble,
         setSimulationMode,
         forgetDevice,
+        pressButton,
+        releaseButton,
+        moveStick,
+        releaseStick,
       }}
     >
       {children}
