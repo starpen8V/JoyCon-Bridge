@@ -11,6 +11,7 @@
   "private": true,
   "packageManager": "pnpm@10.26.1",
   "devDependencies": {
+    "joycon-input": "workspace:*",
     "prettier": "^3.8.3",
     "typescript": "~5.9.3"
   }

@@ -154,6 +154,9 @@ importers:
 
   .:
     devDependencies:
+      joycon-input:
+        specifier: workspace:*
+        version: link:artifacts/mobile/modules/joycon-input
       prettier:
         specifier: ^3.8.3
         version: 3.8.3
@@ -222,8 +225,8 @@ importers:
         specifier: ^56.0.3
         version: 56.0.3(expo@54.0.35)(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
       joycon-input:
-        specifier: file:./modules/joycon-input
-        version: file:artifacts/mobile/modules/joycon-input(expo@54.0.35)
+        specifier: workspace:*
+        version: link:modules/joycon-input
     devDependencies:
       '@babel/core':
         specifier: ^7.25.2
@@ -360,6 +363,8 @@ importers:
       zod-validation-error:
         specifier: ^3.4.0
         version: 3.5.4(zod@3.25.76)
+
+  artifacts/mobile/modules/joycon-input: {}
 
   artifacts/mockup-sandbox:
     devDependencies:
@@ -4021,11 +4026,6 @@ packages:
   jiti@2.7.0:
     resolution: {integrity: sha512-AC/7JofJvZGrrneWNaEnJeOLUx+JlGt7tNa0wZiRPT4MY1wmfKjt2+6O2p2uz2+skll8OZZmJMNqeke7kKbNgQ==}
     hasBin: true
-
-  joycon-input@file:artifacts/mobile/modules/joycon-input:
-    resolution: {directory: artifacts/mobile/modules/joycon-input, type: directory}
-    peerDependencies:
-      expo: '*'
 
   joycon@3.1.1:
     resolution: {integrity: sha512-34wB/Y7MW7bzjKRjUKTa46I2Z7eV62Rkhva+KkopW7Qvv/OSWBqvkSY7vusOPrNuZcUG3tApvdVgNB8POj3SPw==}
@@ -8656,8 +8656,8 @@ snapshots:
 
   babel-plugin-jest-hoist@29.6.3:
     dependencies:
-      '@babel/template': 7.28.6
-      '@babel/types': 7.29.0
+      '@babel/template': 7.29.7
+      '@babel/types': 7.29.7
       '@types/babel__core': 7.20.5
       '@types/babel__traverse': 7.28.0
 
@@ -9944,7 +9944,7 @@ snapshots:
   istanbul-lib-instrument@5.2.1:
     dependencies:
       '@babel/core': 7.29.0
-      '@babel/parser': 7.29.3
+      '@babel/parser': 7.29.7
       '@istanbuljs/schema': 0.1.6
       istanbul-lib-coverage: 3.2.2
       semver: 6.3.1
@@ -10026,10 +10026,6 @@ snapshots:
   jimp-compact@0.16.1: {}
 
   jiti@2.7.0: {}
-
-  joycon-input@file:artifacts/mobile/modules/joycon-input(expo@54.0.35):
-    dependencies:
-      expo: 54.0.35(@babel/core@7.29.0)(@expo/metro-runtime@6.1.2)(expo-router@6.0.24)(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)(typescript@5.9.3)
 
   joycon@3.1.1: {}
 

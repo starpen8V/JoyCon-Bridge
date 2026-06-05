@@ -36,6 +36,7 @@ minimumReleaseAgeExclude:
 
 packages:
   - artifacts/*
+  - artifacts/mobile/modules/joycon-input
   - lib/*
   - lib/integrations/*
   - scripts
