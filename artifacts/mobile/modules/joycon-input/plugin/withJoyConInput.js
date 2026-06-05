@@ -1,12 +1,33 @@
 // @ts-check
 const path = require("path");
 
-// Resolve @expo/config-plugins from the mobile project root so pnpm's
-// non-flat node_modules layout and EAS CLI's own module context both work.
-const appRoot = path.resolve(__dirname, "../../../");
-const { withMainActivity } = require(
-  require.resolve("@expo/config-plugins", { paths: [appRoot] })
-);
+/**
+ * Resolve @expo/config-plugins from the project context rather than relying on
+ * Node's default upward walk (which fails in pnpm strict-isolation workspaces
+ * and when loaded from EAS CLI's own module scope on Windows).
+ *
+ * Resolution order:
+ *  1. artifacts/mobile/node_modules  — direct devDep, works with pnpm
+ *  2. repo root node_modules          — hoisted / flat npm/yarn layout
+ *  3. plain require                   — fallback for any other layout
+ */
+function loadConfigPlugins() {
+  const candidates = [
+    path.resolve(__dirname, "../../../"),        // artifacts/mobile
+    path.resolve(__dirname, "../../../../../"),  // repo root
+  ];
+  for (const base of candidates) {
+    try {
+      return require(require.resolve("@expo/config-plugins", { paths: [base] }));
+    } catch (_) {
+      // try next candidate
+    }
+  }
+  // last resort — works when node_modules is flat (npm/yarn)
+  return require("@expo/config-plugins");
+}
+
+const { withMainActivity } = loadConfigPlugins();
 
 /**
  * Config plugin: injects JoyCon gamepad event hooks into MainActivity.kt.
@@ -45,7 +66,8 @@ module.exports = function withJoyConInput(config) {
 
       // Insert just before the last closing brace of the class
       const lastBrace = src.lastIndexOf("}");
-      src = src.substring(0, lastBrace) + overrides + "\n" + src.substring(lastBrace);
+      src =
+        src.substring(0, lastBrace) + overrides + "\n" + src.substring(lastBrace);
     }
 
     mod.modResults.contents = src;
