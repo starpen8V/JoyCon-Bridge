@@ -1,5 +1,12 @@
 // @ts-check
-const { withMainActivity } = require("@expo/config-plugins");
+const path = require("path");
+
+// Resolve @expo/config-plugins from the mobile project root so pnpm's
+// non-flat node_modules layout and EAS CLI's own module context both work.
+const appRoot = path.resolve(__dirname, "../../../");
+const { withMainActivity } = require(
+  require.resolve("@expo/config-plugins", { paths: [appRoot] })
+);
 
 /**
  * Config plugin: injects JoyCon gamepad event hooks into MainActivity.kt.

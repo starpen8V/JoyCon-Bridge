@@ -1,0 +1,24 @@
+Unable to resolve a valid config plugin for ./modules/joycon-input/plugin/withJoyConInput.
+• No "app.plugin.js" file found in ./modules/joycon-input/plugin/withJoyConInput: config plugins are typically exported from an "app.plugin.js" file in the package root.
+• main export of ./modules/joycon-input/plugin/withJoyConInput does not appear to be a config plugin: the following error was thrown when importing C:\Users\Olego\Documents\GitHub\JoyCon-Bridge\artifacts\mobile\modules\joycon-input\plugin\withJoyConInput.js: Cannot find module '@expo/config-plugins'
+Require stack:
+- C:\Users\Olego\Documents\GitHub\JoyCon-Bridge\artifacts\mobile\modules\joycon-input\plugin\withJoyConInput.js
+- C:\Users\Olego\AppData\Roaming\npm\node_modules\eas-cli\node_modules\@expo\config-plugins\build\utils\plugin-resolver.js
+- C:\Users\Olego\AppData\Roaming\npm\node_modules\eas-cli\node_modules\@expo\config-plugins\build\plugins\withStaticPlugin.js
+- C:\Users\Olego\AppData\Roaming\npm\node_modules\eas-cli\node_modules\@expo\config-plugins\build\plugins\withPlugins.js
+- C:\Users\Olego\AppData\Roaming\npm\node_modules\eas-cli\node_modules\@expo\config-plugins\build\index.js
+- C:\Users\Olego\AppData\Roaming\npm\node_modules\eas-cli\build\build\android\syncProjectConfiguration.js
+- C:\Users\Olego\AppData\Roaming\npm\node_modules\eas-cli\build\build\android\build.js
+- C:\Users\Olego\AppData\Roaming\npm\node_modules\eas-cli\build\build\runBuildAndSubmit.js
+- C:\Users\Olego\AppData\Roaming\npm\node_modules\eas-cli\build\commands\build\index.js
+- C:\Users\Olego\AppData\Roaming\npm\node_modules\eas-cli\node_modules\@oclif\core\lib\module-loader.js
+- C:\Users\Olego\AppData\Roaming\npm\node_modules\eas-cli\node_modules\@oclif\core\lib\help\index.js
+- C:\Users\Olego\AppData\Roaming\npm\node_modules\eas-cli\node_modules\@oclif\core\lib\errors\handle.js
+- C:\Users\Olego\AppData\Roaming\npm\node_modules\eas-cli\node_modules\@oclif\core\lib\errors\index.js
+- C:\Users\Olego\AppData\Roaming\npm\node_modules\eas-cli\node_modules\@oclif\core\lib\config\config.js
+- C:\Users\Olego\AppData\Roaming\npm\node_modules\eas-cli\node_modules\@oclif\core\lib\config\index.js
+- C:\Users\Olego\AppData\Roaming\npm\node_modules\eas-cli\node_modules\@oclif\core\lib\command.js
+- C:\Users\Olego\AppData\Roaming\npm\node_modules\eas-cli\node_modules\@oclif\core\lib\index.js
+- C:\Users\Olego\AppData\Roaming\npm\node_modules\eas-cli\bin\run MODULE_NOT_FOUND
+Verify that ./modules/joycon-input/plugin/withJoyConInput includes a config plugin. If it does not, then remove the entry from plugins in your app config file. Learn more: https://docs.expo.dev/guides/config-plugins/
+    Error: build command failed.
